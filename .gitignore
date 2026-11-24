@@ -1,0 +1,8 @@
+node_modules/
+.work/
+.env
+*.log
+.DS_Store
+test-pipeline.js
+gh_test.txt
+smoke.js

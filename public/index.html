@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Codebase Agent</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Codebase Agent</h1>
+    <p>Submit a repo. The agent reads it, reports bugs it finds, and proposes fixes. You decide.</p>
+  </header>
+
+  <main>
+    <section id="input-view">
+      <form id="input-form" novalidate>
+        <label>
+          GitHub URL
+          <input type="url" id="url" placeholder="https://github.com/owner/repo" />
+        </label>
+        <div class="or">or</div>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept=".zip" hidden />
+          <span id="file-label">Choose a zip file</span>
+        </label>
+        <button type="submit" id="submit">Analyze</button>
+        <p id="input-error" class="error" hidden></p>
+      </form>
+    </section>
+
+    <section id="status-view" hidden>
+      <div class="status">
+        <span id="status-dot" class="dot"></span>
+        <span id="status-text">Queued</span>
+      </div>
+      <progress id="progress" max="100"></progress>
+      <button id="reset" type="button" class="link">Start over</button>
+    </section>
+
+    <section id="result-view" hidden>
+      <div class="result-head">
+        <div>
+          <h2 id="result-language">—</h2>
+          <p id="result-summary" class="muted"></p>
+        </div>
+        <div class="filters" id="filters">
+          <button data-sev="all" class="active">All</button>
+          <button data-sev="critical">Critical</button>
+          <button data-sev="high">High</button>
+          <button data-sev="medium">Medium</button>
+          <button data-sev="low">Low</button>
+        </div>
+      </div>
+      <div id="findings"></div>
+      <p id="result-notes" class="muted"></p>
+    </section>
+  </main>
+
+  <template id="finding-template">
+    <article class="finding">
+      <div class="finding-head">
+        <span class="sev"></span>
+        <strong class="fid"></strong>
+        <span class="loc"></span>
+      </div>
+      <p class="desc"></p>
+      <div class="fix">
+        <span class="fix-label">Proposed fix</span>
+        <pre class="fix-text"></pre>
+      </div>
+    </article>
+  </template>
+
+  <script src="/app.js"></script>
+</body>
+</html>
