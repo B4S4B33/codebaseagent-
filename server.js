@@ -15,6 +15,9 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, model: process.env.MODEL || 'qwen/qwen3.8-27b' });
 });
 
+// Browsers request this on first load; answer with a 204 so it never shows as an error.
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
+
 app.post('/api/analyze', analyzeHandler);
 app.get('/api/jobs/:id', jobHandler);
 

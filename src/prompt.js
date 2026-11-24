@@ -22,15 +22,18 @@ Rules:
 - You may note that a finding depends on assumptions (e.g. "assuming X is null here").
 - Do not summarize the project. Go straight to findings.`;
 
-const USER_TEMPLATE = (tree, files, language) => `Review this codebase for bugs.
+const USER_TEMPLATE = (tree, files, language, omitted) => `Review this codebase for bugs.
 
 Project language/runtime hint: ${language || 'unknown'}
 
-FILE TREE:
+FILE TREE (all discovered files):
 ${tree}
 
-FILES:
+FILES (contents of the ones below):
 ${files}
+${omitted ? '\nNOTE: these files exist in the tree but were omitted from the payload above ' +
+  'because they are large, binary, generated, or over the payload budget. ' +
+  'Do NOT report bugs about them — you cannot see them. Mention them in "couldNotReview".' : ''}
 
 Return ONLY a JSON object with this exact shape, no prose outside it:
 {

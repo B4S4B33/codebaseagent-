@@ -89,6 +89,7 @@ async function mapRepo(root) {
   let skippedBinary = 0;
   let skippedLarge = 0;
   let skippedCap = 0;
+  let skippedPayload = 0;
 
   for (const full of files) {
     if (mapped.length >= config.maxFiles) { skippedCap++; continue; }
@@ -105,6 +106,9 @@ async function mapRepo(root) {
     const capped = content.length > config.maxFileChars
       ? content.slice(0, config.maxFileChars) + '\n\n[TRUNCATED — file longer than limit]\n'
       : content;
+    // Stop filling once we hit the payload budget. The tree still lists every
+    // file, so the LLM can see what was left out.
+    if (totalChars + capped.length > config.maxPayloadChars) { skippedPayload++; continue; }
     totalChars += capped.length;
     mapped.push({ path: rel, size: stat.size, content: capped });
   }
@@ -112,12 +116,16 @@ async function mapRepo(root) {
   return {
     root,
     files: mapped,
+    // Full tree (all discovered files, before caps) so the report can say
+    // which files were omitted from the LLM payload.
+    allFiles: files.map((f) => relative(root, f)),
     summary: {
       totalFiles: mapped.length,
       totalChars,
       skippedBinary,
       skippedLarge,
       skippedCap,
+      skippedPayload,
     },
   };
 }

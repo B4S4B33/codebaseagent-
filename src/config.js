@@ -23,6 +23,10 @@ const config = {
   get maxFiles() { return Number(process.env.MAX_FILES || 400); },
   // Per-file character cap before we truncate.
   get maxFileChars() { return Number(process.env.MAX_FILE_CHARS || 20_000); },
+  // Total payload budget (chars) sent to the LLM, including the prompt.
+  // Kept below the model's window. ~4 chars/token, so 60k chars ~= 15k tokens,
+  // leaving room for the system prompt, the JSON schema, and the reply.
+  get maxPayloadChars() { return Number(process.env.MAX_PAYLOAD_CHARS || 60_000); },
 
   // Timeouts, in ms.
   get cloneTimeoutMs() { return Number(process.env.CLONE_TIMEOUT_MS || 120_000); },

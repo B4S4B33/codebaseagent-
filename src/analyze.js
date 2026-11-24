@@ -26,26 +26,43 @@ function run(jobId, input) {
       // 2. Map
       patch(jobId, { progress: 'mapping files' });
       const map = await mapRepo(repoDir);
-      const tree = map.files.map((f) => `${f.size}B  ${f.path}`).join('\n');
-      const files = map.files
-        .map((f) => `===== ${f.path} =====\n${f.content}\n`)
-        .join('\n');
+      const language = detectLanguage(map);
+      const omitted = map.allFiles
+        .filter((p) => !map.files.some((f) => f.path === p))
+        .slice(0, 30);
+      const buildPayload = () => {
+        const tree = map.allFiles.map((p) => `  ${p}`).join('\n');
+        const files = map.files
+          .map((f) => `===== ${f.path} =====\n${f.content}\n`)
+          .join('\n');
+        const { system, user } = buildPrompt({ tree, files, language, omitted });
+        return {
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+        };
+      };
 
-      // 3. LLM review
+      // 3. LLM review. If the payload is still too big for the model, drop the
+      // tail of the file list and retry instead of failing the job.
       patch(jobId, { status: 'analyzing', progress: 'reviewing with LLM' });
-      const { system, user } = buildPrompt({ tree, files, language: detectLanguage(map) });
-      const raw = await request({
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        temperature: 0,
-        maxTokens: 4000,
-        json: true,
-      });
+      let raw;
+      try {
+        raw = await request({ ...buildPayload(), temperature: 0, maxTokens: 4000, json: true });
+      } catch (e) {
+        if (/400|too large|length/i.test(e.message) && map.files.length > 3) {
+          const before = map.files.length;
+          map.files = map.files.slice(0, Math.max(3, Math.ceil(map.files.length / 2)));
+          patch(jobId, { progress: `payload too large for model; kept ${map.files.length}/${before} files` });
+          raw = await request({ ...buildPayload(), temperature: 0, maxTokens: 4000, json: true });
+        } else {
+          throw e;
+        }
+      }
 
       // 4. Validate
-      const report = validateReport(raw, map);
+      const report = validateReport(raw, map, omitted);
       resolve(report);
     } catch (e) {
       reject(e);
@@ -74,7 +91,7 @@ function detectLanguage(map) {
   return 'unknown';
 }
 
-function validateReport(raw, map) {
+function validateReport(raw, map, omitted = []) {
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -103,6 +120,7 @@ function validateReport(raw, map) {
     findings: normalized,
     couldNotReview: Array.isArray(parsed.couldNotReview) ? parsed.couldNotReview.map(String) : [],
     notes: String(parsed.notes || ''),
+    omittedFiles: omitted,
     stats: map.summary,
     generatedAt: new Date().toISOString(),
   };
